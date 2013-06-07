@@ -16,7 +16,7 @@ mvn exec:exec
 
 
 ## Output
-(I think I must be doing something wrong with the intersection operator) - this is on a i7 920.
+This is on a i7 920.
 
 <pre>
 [INFO] Scanning for projects...
