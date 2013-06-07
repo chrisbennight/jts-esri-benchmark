@@ -9,8 +9,10 @@ Extract all the files to a directory and edit the file location in the GeomBench
 
 
 ## To Run:
+<pre>
 mvn clean compile
 mvn exec:exec
+</pre>
 
 
 ## Output
