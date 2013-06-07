@@ -203,11 +203,6 @@ public class GeomBenchmark {
 		}
 	}
 
-	// sleep to allow buffers and malloc to settle
-	// Compare.wait();
-
-	
-	
 	
 	public void runchecks() {
 		if (Compare.MEASURE_AREA) {
@@ -308,6 +303,8 @@ public class GeomBenchmark {
 			
 			//ESRI
 			t0 = System.nanoTime();
+			area1 = 0;
+			area2 = 0;
 			for (int i = 0; i < Compare.OVERLAY_COUNT; i++) {
 				int k = 0;
 				Iterator<com.esri.core.geometry.Polygon> eit = Eellipses.iterator();
@@ -518,7 +515,7 @@ public class GeomBenchmark {
 				}
 			}
 			t1 = System.nanoTime();
-			Compare.report_contains("JTS", t1 - t0, polygons.size(), count, -1);
+			Compare.report_contains("ESRI", t1 - t0, polygons.size(), count, -1);
 
 		}
 	}
