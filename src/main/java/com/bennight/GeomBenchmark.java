@@ -22,11 +22,14 @@ import com.vividsolutions.jts.geom.CoordinateList;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.LinearRing;
 import com.vividsolutions.jts.geom.MultiPolygon;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.geom.prep.PreparedPolygon;
+import com.vividsolutions.jts.io.ParseException;
+import com.vividsolutions.jts.io.WKTReader;
 import com.vividsolutions.jts.io.WKTWriter;
 import com.vividsolutions.jts.simplify.DouglasPeuckerSimplifier;
 
@@ -53,14 +56,17 @@ public class GeomBenchmark {
 
 	com.esri.core.geometry.OperatorFactoryLocal factory = com.esri.core.geometry.OperatorFactoryLocal.getInstance();
 	com.esri.core.geometry.OperatorImportFromWkt operatorImport = (com.esri.core.geometry.OperatorImportFromWkt) factory.getOperator(com.esri.core.geometry.Operator.Type.ImportFromWkt);
+	com.esri.core.geometry.OperatorExportToWkt operatorExport = (com.esri.core.geometry.OperatorExportToWkt) factory.getOperator(com.esri.core.geometry.Operator.Type.ExportToWkt);
 	com.esri.core.geometry.OperatorIntersection operatorIntersection = (com.esri.core.geometry.OperatorIntersection) factory.getOperator(com.esri.core.geometry.Operator.Type.Intersection);
 	com.esri.core.geometry.OperatorConvexHull operatorConvexHull = (com.esri.core.geometry.OperatorConvexHull) factory.getOperator(com.esri.core.geometry.Operator.Type.ConvexHull);
 	com.esri.core.geometry.OperatorClip operatorClip = (com.esri.core.geometry.OperatorClip) factory.getOperator(com.esri.core.geometry.Operator.Type.Clip);
 	com.esri.core.geometry.OperatorSimplify operatorSimplify = (com.esri.core.geometry.OperatorSimplify) factory.getOperator(com.esri.core.geometry.Operator.Type.Simplify);
 	com.esri.core.geometry.OperatorWithin operatorWithin = (com.esri.core.geometry.OperatorWithin) factory.getOperator(com.esri.core.geometry.Operator.Type.Within);
 	com.esri.core.geometry.OperatorContains operatorContains = (com.esri.core.geometry.OperatorContains) factory.getOperator(com.esri.core.geometry.Operator.Type.Contains);
+	com.esri.core.geometry.OperatorGeneralize operatorGeneralize = (com.esri.core.geometry.OperatorGeneralize) factory.getOperator(com.esri.core.geometry.Operator.Type.Generalize);
 	com.esri.core.geometry.SpatialReference sr = com.esri.core.geometry.SpatialReference.create(4269);
-	WKTWriter wkt = new WKTWriter();	
+	WKTWriter wkt = new WKTWriter();
+	WKTReader wktr = new WKTReader();
 	private GeometryFactory geometryFactory;
 
 	// intersections/unions
@@ -408,7 +414,8 @@ public class GeomBenchmark {
 			t0 = System.nanoTime();
 			for (com.esri.core.geometry.Polygon polygon : Epolygons) {
 				
-				com.esri.core.geometry.Geometry simplegeom = operatorSimplify.execute(polygon, sr, false,null);
+				//com.esri.core.geometry.Geometry simplegeom = operatorSimplify.execute(polygon, sr, false,null);
+				com.esri.core.geometry.Geometry simplegeom = operatorGeneralize.execute(polygon, Compare.SIMPLIFY_DISTANCE, false, null);
 				count1 += polygon.getPointCount();
 				count2 += ((com.esri.core.geometry.Polygon)simplegeom).getPointCount();
 				if (Compare.SIMPLIFY_LENGTH) {
@@ -518,6 +525,38 @@ public class GeomBenchmark {
 			Compare.report_contains("ESRI", t1 - t0, polygons.size(), count, -1);
 
 		}
+		
+		//robustness check
+		//http://tsusiatsoftware.net/jts/jts-faq/jts-faq.html#D
+		//Intersection of LINESTRING(0 0, 5 3), LINESTRING(0 0, 1.2 0.72) should be (0 0, 1.2, 0.72)
+		//JTS
+		String wkt1 = "LINESTRING(0 0, 5 3 )";
+		String wkt2 = "LINESTRING(0 0, 1.2 0.72)";
+		
+		Geometry gi1 = null;
+		Geometry gi2 = null;
+		try {
+			gi1 = wktr.read(wkt1);
+		    gi2 = wktr.read(wkt2);
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		System.out.println("");
+		System.out.println("TEST of the intersction of LINESTRING(0 0, 5 3) & LINESTRING(0 0, 1.2 0.72)");
+		System.out.println("Actual value is LINESTRING(0 0, 1.2 0.72) - but issues occur due to finite precision - checks robustness");
+		System.out.println("JTS Intersection: " + wkt.writeFormatted(gi1.intersection(gi2)));
+		
+		//ESRI
+		com.esri.core.geometry.Geometry Egi1 = (com.esri.core.geometry.Geometry) operatorImport.execute(0, com.esri.core.geometry.Geometry.Type.Unknown , wkt1, null);
+		com.esri.core.geometry.Geometry Egi2 = (com.esri.core.geometry.Geometry) operatorImport.execute(0, com.esri.core.geometry.Geometry.Type.Unknown , wkt2, null);
+		com.esri.core.geometry.GeometryCursor c1 = new com.esri.core.geometry.SimpleGeometryCursor(Egi1);
+		com.esri.core.geometry.GeometryCursor c2 = new com.esri.core.geometry.SimpleGeometryCursor(Egi2);
+		com.esri.core.geometry.Geometry inter12 = operatorIntersection.execute(c1, c2, sr, null).next();
+		System.out.println("ESRI Intersection: " + operatorExport.execute(0, inter12, null));
+		
+		
 	}
 
 	public static void main(String[] args) throws Exception {
