@@ -65,3 +65,7 @@ ESRI Intersection: MULTILINESTRING ((0 0, 1.2000000000000002 0.72))
 [INFO] Final Memory: 6M/183M
 [INFO] ------------------------------------------------------------------------
 </pre>
+
+Interesting to note that against v. 1.10 of JTS the intersction test gave a value if POINT(0 0). (http://tsusiatsoftware.net/jts/jts-faq/jts-faq.html#D)
+
+JTS seems to have fixed this in v. 1.13
